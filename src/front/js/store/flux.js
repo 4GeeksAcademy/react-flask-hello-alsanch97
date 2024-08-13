@@ -13,8 +13,10 @@ const getState = ({ getStore, getActions, setStore }) => {
 					background: "white",
 					initial: "white"
 				}
-			]
+			],
+			token: localStorage.getItem("token") || null
 		},
+
 		actions: {
 			// Use getActions to call a function within a fuction
 			exampleFunction: () => {
@@ -46,6 +48,71 @@ const getState = ({ getStore, getActions, setStore }) => {
 
 				//reset the global store
 				setStore({ demo: demo });
+			},
+			register: async (user) => {
+				try {
+					const response = await fetch(`${process.env.BACKEND_URL}/api/signup`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify(user)
+					})
+					const data = await response.json()
+					if (response.status === 201) {
+						return true
+					} else {
+						return false
+					}
+
+				} catch (error) {
+					console.log(error)
+				}
+			},
+			login: async (user) => {
+				try {
+					const response = await fetch(`${process.env.BACKEND_URL}/api/login`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify(user)
+					})
+					const data = await response.json()
+					if (response.status == 200) {
+						setStore({
+							token: data.token
+						})
+						localStorage.setItem("token", data.token)
+						return true
+					} else {
+						return false
+					}
+
+				} catch (error) {
+					console.log(error)
+				}
+			},
+
+			logout: () => {
+				setStore({
+					token: null
+				})
+				localStorage.removeItem("token")
+			},
+			getAllUsers: async () => {
+				try {
+					const response = await fetch(`${process.env.BACKEND_URL}/api/signup`, {
+						method: "GET",
+						headers: {
+							"Authorization": `Bearer ${getStore().token}`
+						}
+					})
+					return response.status
+
+				} catch (error) {
+					console.log(error)
+				}
 			}
 		}
 	};

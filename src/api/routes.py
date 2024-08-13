@@ -18,12 +18,12 @@ api = Blueprint('api', __name__)
 # Allow CORS requests to this API
 CORS(api)
 
-def set_password(password):
-    return generate_password_hash(password)
+def set_password(password, salt):
+    return generate_password_hash(f"{password}{salt}")
 
 
-def check_password(hash_password, password):
-    return check_password_hash(hash_password, password)
+def check_password(hash_password, password, salt):
+    return check_password_hash(hash_password, f"{password}{salt}")
 
 @api.route('/hello', methods=['POST', 'GET'])
 def handle_hello():
@@ -40,12 +40,14 @@ def add_user():
 
     email = body.get("email", None)
     password = body.get("password", None)
+    lastname = body.get("lastname", None)
 
-    if email is None or password is None:
+    if email is None or password is None or lastname is None:
         return jsonify("You need an email and password"), 400 
     else:
-        password = set_password(password)
-        user = User(email=email, password=password)
+        salt = b64encode(os.urandom(32)).decode("utf-8")
+        password = set_password(password, salt)
+        user = User(email=email, lastname=lastname, password=password, salt=salt)
 
         try:
             db.session.add(user)
@@ -72,12 +74,12 @@ def login_user():
         if user is None or password is None:
             return jsonify ({"message":"bad credentials"}), 400
         else:
-            if check_password(user.password, password):
+            if check_password(user.password, password, user.salt):
                 access_token = create_access_token(identity=user.id)
                 return jsonify(access_token=access_token), 200
     
     
-@api.route("/signup", methods=["GET"])
+@api.route("/signup", methods=['GET'])
 @jwt_required()
 def get_all_users():
     user = User.query.get(get_jwt_identity())
